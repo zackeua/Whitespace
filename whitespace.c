@@ -94,7 +94,7 @@ int main(int argc, char const *argv[]) {
             numberOfChars++;
             if (numberOfChars == maximumNumberOfChars) {
                 maximumNumberOfChars = maximumNumberOfChars * 2;
-                chars = realloc(chars, maximumNumberOfChars);
+                chars = realloc(chars, maximumNumberOfChars*sizeof(*chars));
                 if (chars == NULL) {
                     printf("Whole file could not be cleaned\n");
                     return 0;
@@ -102,6 +102,7 @@ int main(int argc, char const *argv[]) {
             }
         }
     }
+    fclose(fp);
 
     int stackPointer = 0;
     int stackSize = 64;
@@ -171,7 +172,7 @@ int main(int argc, char const *argv[]) {
                 temp.label = number;
                 temp.to = charPointer;
 
-                jump = realloc(jump, numberOfLabels + 1);
+                jump = realloc(jump, (numberOfLabels + 1)*sizeof(*jump));
                 jump[numberOfLabels] = temp;
                 numberOfLabels++;
                 charPointer++;
@@ -305,7 +306,7 @@ int main(int argc, char const *argv[]) {
                 stackPointer++;
                 if (stackSize <= stackPointer) {
                     stackSize = stackSize * 2;
-                    stack = realloc(stack, stackSize);
+                    stack = realloc(stack, stackSize*sizeof(*stack));
                 }
                 stack[stackPointer] = sign * number;
                 //printf("%d\n", stack[stackPointer]);
@@ -317,7 +318,7 @@ int main(int argc, char const *argv[]) {
                     stackPointer++;
                     if (stackSize <= stackPointer) {
                         stackSize = stackSize * 2;
-                        stack = realloc(stack, stackSize);
+                        stack = realloc(stack, stackSize*sizeof(*stack));
                     }
                     stack[stackPointer] = stack[stackPointer - 1];
                 }
@@ -380,7 +381,7 @@ int main(int argc, char const *argv[]) {
                 callStackPointer++;
                 if (callSize <= callStackPointer) {
                     callSize = callSize * 2;
-                    callStack = realloc(callStack, callSize);
+                    callStack = realloc(callStack, callSize*sizeof(*callStack));
                 }
 
                 callStack[callStackPointer] = charPointer;
@@ -532,7 +533,7 @@ int main(int argc, char const *argv[]) {
                     debugPrint("Store in heap\n");
                     while (heapSize < stack[stackPointer - 1]) { // increase heap if nessesary
                         heapSize = heapSize * 2;
-                        heap = realloc(heap, heapSize);
+                        heap = realloc(heap, heapSize*sizeof(*heap));
                     }
                     heap[stack[stackPointer - 1]] = stack[stackPointer]; // store value in heap
                     stack[stackPointer] = 0;
@@ -544,7 +545,7 @@ int main(int argc, char const *argv[]) {
                     //stackPointer++;
                     if (stackSize <= stackPointer) {
                         stackSize = stackSize * 2;
-                        stack = realloc(stack, stackSize);
+                        stack = realloc(stack, stackSize*sizeof(*stack));
                     }
 
                     if (heapSize > stack[stackPointer]) {
@@ -584,7 +585,7 @@ int main(int argc, char const *argv[]) {
                     scanf(" %c", &buffer);
                     while (heapSize < stack[stackPointer]) {
                         heapSize = heapSize * 2;
-                        heap = realloc(heap, heapSize);
+                        heap = realloc(heap, heapSize*sizeof(*heap));
                     }
                     heap[stack[stackPointer]] = buffer;
                     stack[stackPointer] = 0;
@@ -596,7 +597,7 @@ int main(int argc, char const *argv[]) {
                     scanf(" %d", &buffer);
                     while (heapSize < stack[stackPointer]) {
                         heapSize = heapSize * 2;
-                        heap = realloc(heap, heapSize);
+                        heap = realloc(heap, heapSize*sizeof(*heap));
                     }
                     heap[stack[stackPointer]] = buffer;
                     stack[stackPointer] = 0;
@@ -622,6 +623,12 @@ int main(int argc, char const *argv[]) {
         command[1] = '0';
 
     }
+
+    free(stack);
+    free(callStack);
+    free(heap);
+    free(jump);
+    free(chars);
 
 
     return 0;
