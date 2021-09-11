@@ -44,21 +44,30 @@ char getChar(char c) {
     return c;
 }
 
+int freeAll(int *stack, int *callStack, int *heap, jump_t *jump, char *chars, int ret) {
+    free(stack);
+    free(callStack);
+    free(heap);
+    free(jump);
+    free(chars);
+    return ret;
+}
+
 
 int main(int argc, char const *argv[]) {
     if (argc < 2) { // basic error handling
         printf("No file to run\n");
-        return 0;
+        return -1;
     }
     else if (argc > 2) {
         printf("Too many input arguments\n");
-        return 0;
+        return -1;
     }
     else {
         int len = strlen(argv[1]);
         if (!(argv[1][len-3] == '.' && argv[1][len-2] == 'w' && argv[1][len-1] == 's')) {
             printf("Wrong filetype\n");
-            return 0;
+            return -1;
         }
     }
 
@@ -66,13 +75,33 @@ int main(int argc, char const *argv[]) {
     fp = fopen(argv[1],"r");
     if (fp == NULL) {
         printf("File not found\n");
-        return 0;
+        return -1;
     }
 
+
+    int charPointer = 0;
+    char imp[2] = "00";
+    char command[2] = "00";
+    int parse = 1;
+
+    int stackPointer = 0;
+    int stackSize = 64;
+    int *stack = calloc(stackSize, sizeof(*stack));
+
+    int callSize = 0;
+    int callStackPointer = 0;
+    int *callStack = calloc(callSize, sizeof(*callStack));
+
+    int heapSize = 64;
+    int *heap = calloc(heapSize, sizeof(*heap));
+
+    int numberOfLabels = 0;
+    jump_t *jump = calloc(numberOfLabels, sizeof(*jump));
 
     int maximumNumberOfChars = 1024;
     int numberOfChars = 0;
     char *chars = calloc(maximumNumberOfChars, sizeof(*chars)); // ish filestream
+
     char buffer;
     while (fscanf(fp, "%c", &buffer) != EOF) { // clean file from other than whitespace chars
         /*
@@ -97,32 +126,15 @@ int main(int argc, char const *argv[]) {
                 chars = realloc(chars, maximumNumberOfChars*sizeof(*chars));
                 if (chars == NULL) {
                     printf("Whole file could not be cleaned\n");
-                    return 0;
+                    free(fp);
+                    return freeAll(stack, callStack, heap, jump, chars, -1);
                 }
             }
         }
     }
     fclose(fp);
 
-    int stackPointer = 0;
-    int stackSize = 64;
-    int *stack = calloc(stackSize, sizeof(*stack));
 
-    int callSize = 0;
-    int callStackPointer = 0;
-    int *callStack = calloc(callSize, sizeof(*callStack));
-
-    int heapSize = 64;
-    int *heap = calloc(heapSize, sizeof(*heap));
-
-    int numberOfLabels = 0;
-    jump_t *jump = calloc(numberOfLabels, sizeof(*jump));
-
-
-    int charPointer = 0;
-    char imp[2] = "00";
-    char command[2] = "00";
-    int parse = 1;
 
 
 
@@ -214,7 +226,7 @@ int main(int argc, char const *argv[]) {
             }
             else {
                 //printf("No correct command for Flow Control\n");
-                return 0;
+                return freeAll(stack, callStack, heap, jump, chars, -1);
             }
         }
 
@@ -242,7 +254,7 @@ int main(int argc, char const *argv[]) {
             else {
                 //printf("No correct IMP\n");
                 //printf("Here\n");
-                return 0;
+                return freeAll(stack, callStack, heap, jump, chars, -1);
             }
         }
 
@@ -263,7 +275,7 @@ int main(int argc, char const *argv[]) {
         printf("Label: %d, to: %d\n", jump[i].label, jump[i].to);
     }
     */
-    
+
     while (charPointer <= numberOfChars && parse) {
         /* get instrunction:
         read type of instrunction i.e. imp
@@ -347,8 +359,8 @@ int main(int argc, char const *argv[]) {
                     stackPointer--;
                 }
                 else {
-                    printf("No correct command for Stack Manipulation\n");
-                    return 0;
+                    //printf("No correct command for Stack Manipulation\n");
+                    return freeAll(stack, callStack, heap, jump, chars, -1);
                 }
             }
 
@@ -379,9 +391,12 @@ int main(int argc, char const *argv[]) {
                 }
 
                 callStackPointer++;
-                if (callSize <= callStackPointer) {
+                if (callSize < callStackPointer) {
                     callSize = callSize * 2;
                     callStack = realloc(callStack, callSize*sizeof(*callStack));
+                    if (callStack == NULL) {
+                        return freeAll(stack, callStack, heap, jump, chars, -1);
+                    }
                 }
 
                 callStack[callStackPointer] = charPointer;
@@ -473,8 +488,8 @@ int main(int argc, char const *argv[]) {
                 parse = 0;
             }
             else {
-                printf("No correct command for Flow Control\n");
-                return 0;
+                //printf("No correct command for Flow Control\n");
+                return freeAll(stack, callStack, heap, jump, chars, -1);
             }
         }
 
@@ -519,8 +534,8 @@ int main(int argc, char const *argv[]) {
                     stack[stackPointer + 1] = 0;
                 }
                 else {
-                    printf("No correct command for Arithmetic\n");
-                    return 0;
+                    //printf("No correct command for Arithmetic\n");
+                    return freeAll(stack, callStack, heap, jump, chars, -1);
                 }
 
             }
@@ -531,9 +546,12 @@ int main(int argc, char const *argv[]) {
                 charPointer++;
                 if (command[0] == ' ') {  // Store in heap
                     debugPrint("Store in heap\n");
-                    while (heapSize < stack[stackPointer - 1]) { // increase heap if nessesary
+                    while (heapSize <= stack[stackPointer - 1]) { // increase heap if nessesary
                         heapSize = heapSize * 2;
                         heap = realloc(heap, heapSize*sizeof(*heap));
+                        if (heap == NULL) {
+                            return freeAll(stack, callStack, heap, jump, chars, -1);
+                        }
                     }
                     heap[stack[stackPointer - 1]] = stack[stackPointer]; // store value in heap
                     stack[stackPointer] = 0;
@@ -546,6 +564,9 @@ int main(int argc, char const *argv[]) {
                     if (stackSize <= stackPointer) {
                         stackSize = stackSize * 2;
                         stack = realloc(stack, stackSize*sizeof(*stack));
+                        if (stack == NULL) {
+                            return freeAll(stack, callStack, heap, jump, chars, -1);
+                        }
                     }
 
                     if (heapSize > stack[stackPointer]) {
@@ -556,8 +577,8 @@ int main(int argc, char const *argv[]) {
                     }
                 }
                 else {
-                    printf("No correct command for Heap Access\n");
-                    return 0;
+                    //printf("No correct command for Heap Access\n");
+                    return freeAll(stack, callStack, heap, jump, chars, -1);
                 }
 
             }
@@ -583,9 +604,12 @@ int main(int argc, char const *argv[]) {
                     debugPrint("Read a char and place it in the location given by top of stack\n");
                     char buffer;
                     scanf(" %c", &buffer);
-                    while (heapSize < stack[stackPointer]) {
+                    while (heapSize <= stack[stackPointer]) {
                         heapSize = heapSize * 2;
                         heap = realloc(heap, heapSize*sizeof(*heap));
+                        if (heap == NULL) {
+                            return freeAll(stack, callStack, heap, jump, chars, -1);
+                        }
                     }
                     heap[stack[stackPointer]] = buffer;
                     stack[stackPointer] = 0;
@@ -595,23 +619,26 @@ int main(int argc, char const *argv[]) {
                     debugPrint("Read number and place it in the location given by top of stack\n");
                     int buffer;
                     scanf(" %d", &buffer);
-                    while (heapSize < stack[stackPointer]) {
+                    while (heapSize <= stack[stackPointer]) {
                         heapSize = heapSize * 2;
                         heap = realloc(heap, heapSize*sizeof(*heap));
+                        if (heap == NULL) {
+                            return freeAll(stack, callStack, heap, jump, chars, -1);
+                        }
                     }
                     heap[stack[stackPointer]] = buffer;
                     stack[stackPointer] = 0;
                     stackPointer--;
                 }
                 else {
-                    printf("No correct command for I/O\n");
-                    return 0;
+                    //printf("No correct command for I/O\n");
+                    return freeAll(stack, callStack, heap, jump, chars, -1);
                 }
             }
 
             else {
-                printf("No correct IMP\n");
-                return 0;
+                //printf("No correct IMP\n");
+                return freeAll(stack, callStack, heap, jump, chars, -1);
             }
         }
 
@@ -624,12 +651,5 @@ int main(int argc, char const *argv[]) {
 
     }
 
-    free(stack);
-    free(callStack);
-    free(heap);
-    free(jump);
-    free(chars);
-
-
-    return 0;
+    return freeAll(stack, callStack, heap, jump, chars, 0);
 }
